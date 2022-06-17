@@ -26,15 +26,12 @@ func main() {
 	}
 	log.Info().Msg("Created HEC client")
 
-	b := bot.Bot{
-		Token: cfg.Token,
-		Sink: func(timestamp time.Time, bytes []byte) {
-			err := hecClient.SendData(timestamp, bytes)
-			if err != nil {
-				log.Error().Err(err).Msg("Error sending data")
-			}
-		},
-	}
+	b := bot.NewBot(cfg.Token, func(timestamp time.Time, bytes []byte) {
+		err := hecClient.SendData(timestamp, bytes)
+		if err != nil {
+			log.Error().Err(err).Msg("Error sending data")
+		}
+	})
 
 	err = b.Start()
 
