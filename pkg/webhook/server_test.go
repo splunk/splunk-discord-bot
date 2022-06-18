@@ -70,17 +70,17 @@ func Test_Server_ServeHTTP(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			mockBot := mocks.NewMockBot(mockCtrl)
-			s := NewServer(config.Config{
+			s := NewServer(&config.Config{
 				Token:              "1234",
 				HecEndpoint:        "",
 				HecToken:           "",
 				InsecureSkipVerify: false,
 				HecIndex:           "",
 				WebHooks: []config.WebhookConfig{
-					config.WebhookConfig{
+					{
 						ID:      "foo",
 						Channel: "somechannel",
-					},
+										},
 				},
 			}, mockBot).(*serverImpl)
 			recorder := httptest.NewRecorder()

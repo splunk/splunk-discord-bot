@@ -1,11 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"github.com/rs/zerolog/log"
 	"github.com/splunk/splunk-discord-bot/pkg/bot"
 	"github.com/splunk/splunk-discord-bot/pkg/config"
 	"github.com/splunk/splunk-discord-bot/pkg/hec"
+	"github.com/splunk/splunk-discord-bot/pkg/webhook"
 	"os"
 	"os/signal"
 	"syscall"
@@ -36,17 +37,24 @@ func main() {
 	err = b.Start()
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("bot failed to start")
 	}
 	log.Info().Msg("Created bot")
 
+	s := webhook.NewServer(cfg, b)
+	go func() {
+		err := s.Start()
+		if err != nil {
+			log.Fatal().Err(err).Msg("webhook server crashed")
+		}
+	}()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	stop := make(chan bool)
 	go func() {
 		<-c
+		_ = s.Stop(context.Background())
 		_ = b.Stop()
 		_ = hecClient.Stop()
 		stop <- true

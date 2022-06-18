@@ -22,7 +22,7 @@ type Server interface {
 	Stop(ctx context.Context) error
 }
 
-func NewServer(cfg config.Config, bot bot.Bot) Server {
+func NewServer(cfg *config.Config, bot bot.Bot) Server {
 	return &serverImpl {
 		bot: bot,
 		webhooks: cfg.WebHooks,

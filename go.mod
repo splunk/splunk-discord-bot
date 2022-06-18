@@ -8,6 +8,8 @@ replace github.com/splunk/splunk-discord-bot/hec => ./pkg/hec
 
 replace github.com/splunk/splunk-discord-bot/config => ./pkg/config
 
+replace github.com/splunk/splunk-discord-bot/webhook => ./pkg/webhook
+
 require (
 	github.com/bwmarrin/discordgo v0.25.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.52.0
