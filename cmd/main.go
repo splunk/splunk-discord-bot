@@ -1,11 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"github.com/rs/zerolog/log"
 	"github.com/splunk/splunk-discord-bot/pkg/bot"
 	"github.com/splunk/splunk-discord-bot/pkg/config"
 	"github.com/splunk/splunk-discord-bot/pkg/hec"
+	"github.com/splunk/splunk-discord-bot/pkg/webhook"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,30 +27,34 @@ func main() {
 	}
 	log.Info().Msg("Created HEC client")
 
-	b := bot.Bot{
-		Token: cfg.Token,
-		Sink: func(timestamp time.Time, bytes []byte) {
-			err := hecClient.SendData(timestamp, bytes)
-			if err != nil {
-				log.Error().Err(err).Msg("Error sending data")
-			}
-		},
-	}
+	b := bot.NewBot(cfg.Token, func(timestamp time.Time, bytes []byte) {
+		err := hecClient.SendData(timestamp, bytes)
+		if err != nil {
+			log.Error().Err(err).Msg("Error sending data")
+		}
+	})
 
 	err = b.Start()
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("bot failed to start")
 	}
 	log.Info().Msg("Created bot")
 
+	s := webhook.NewServer(cfg, b)
+	go func() {
+		err := s.Start()
+		if err != nil {
+			log.Fatal().Err(err).Msg("webhook server crashed")
+		}
+	}()
 
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	stop := make(chan bool)
 	go func() {
 		<-c
+		_ = s.Stop(context.Background())
 		_ = b.Stop()
 		_ = hecClient.Stop()
 		stop <- true
