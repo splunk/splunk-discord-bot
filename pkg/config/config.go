@@ -12,12 +12,13 @@ type WebhookConfig struct {
 }
 
 type Config struct {
-	Token              string          `json:"token"`
-	HecEndpoint        string          `json:"hec_endpoint"`
-	HecToken           string          `json:"hec_token"`
-	InsecureSkipVerify bool            `json:"hec_insecure_skip_verify"`
-	HecIndex           string          `json:"hec_index"`
-	WebHooks           []WebhookConfig `json:"webhook"`
+	Token              string           `json:"token"`
+	HecEndpoint        string           `json:"hec_endpoint"`
+	HecToken           string           `json:"hec_token"`
+	InsecureSkipVerify bool             `json:"hec_insecure_skip_verify"`
+	HecIndex           string           `json:"hec_index"`
+	WebHooks           []*WebhookConfig `json:"webhooks"`
+	WebhookListenAddr  string           `json:"listen_addr"`
 }
 
 func ReadConfig() (*Config, error) {

@@ -7,6 +7,7 @@ import (
 	"github.com/splunk/splunk-discord-bot/pkg/config"
 	"github.com/splunk/splunk-discord-bot/pkg/hec"
 	"github.com/splunk/splunk-discord-bot/pkg/webhook"
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,38 +15,42 @@ import (
 )
 
 func main() {
-	log.Info().Msg("Starting bot")
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	logger.Info("Starting bot")
 	cfg, err := config.ReadConfig()
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Error reading config")
+		logger.Fatal("Error reading config", zap.Error(err))
 	}
 
-	hecClient, err := hec.CreateClient(cfg.HecEndpoint, cfg.HecToken, cfg.InsecureSkipVerify, cfg.HecIndex)
+	hecClient, err := hec.CreateClient(cfg.HecEndpoint, cfg.HecToken, cfg.InsecureSkipVerify, cfg.HecIndex, logger)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Error creating hec client")
+		logger.Fatal("Error creating hec client", zap.Error(err))
 	}
-	log.Info().Msg("Created HEC client")
+	logger.Info("Created HEC client")
 
 	b := bot.NewBot(cfg.Token, func(timestamp time.Time, bytes []byte) {
 		err := hecClient.SendData(timestamp, bytes)
 		if err != nil {
-			log.Error().Err(err).Msg("Error sending data")
+			logger.Error("Error sending data", zap.Error(err))
 		}
 	})
 
 	err = b.Start()
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("bot failed to start")
+		logger.Fatal("bot failed to start", zap.Error(err))
 	}
-	log.Info().Msg("Created bot")
+	logger.Info("Created bot")
 
-	s := webhook.NewServer(cfg, b)
+	s := webhook.NewServer(cfg, logger, b)
 	go func() {
 		err := s.Start()
 		if err != nil {
-			log.Fatal().Err(err).Msg("webhook server crashed")
+			logger.Fatal("webhook server crashed", zap.Error(err))
 		}
 	}()
 
@@ -59,6 +64,6 @@ func main() {
 		_ = hecClient.Stop()
 		stop <- true
 	}()
-	log.Info().Msg("Started bot")
+	logger.Info("Started bot")
 	<-stop
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/splunk/splunk-discord-bot/pkg/config"
 	"github.com/splunk/splunk-discord-bot/pkg/mocks"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +20,7 @@ const correctJson = `{
 	},
 	"sid" : "scheduler_admin_search_W2_at_14232356_132",
 	"results_link" : "http://web.example.local:8000/app/search/@go?sid=scheduler_admin_search_W2_at_14232356_132",
-	"search_name" : null,
+	"search_name" : "alert_name",
 	"owner" : "admin",
 	"app" : "search"
 }`
@@ -54,7 +55,7 @@ func Test_Server_ServeHTTP(t *testing.T) {
 			req:        httptest.NewRequest("POST", "/?webhook=foo", strings.NewReader(correctJson)),
 			statusCode: 500,
 			botFn: func(b *mocks.MockBot) {
-				b.EXPECT().SendMessage("somechannel", "8").Return(errors.New("some error"))
+				b.EXPECT().SendMessage("somechannel", "alert_name - see results http://web.example.local:8000/app/search/@go?sid=scheduler_admin_search_W2_at_14232356_132").Return(errors.New("some error"))
 			},
 		},
 		{
@@ -62,7 +63,7 @@ func Test_Server_ServeHTTP(t *testing.T) {
 			req:        httptest.NewRequest("POST", "/?webhook=foo", strings.NewReader(correctJson)),
 			statusCode: 200,
 			botFn: func(b *mocks.MockBot) {
-				b.EXPECT().SendMessage("somechannel", "8").Return(nil)
+				b.EXPECT().SendMessage("somechannel", "alert_name - see results http://web.example.local:8000/app/search/@go?sid=scheduler_admin_search_W2_at_14232356_132").Return(nil)
 			},
 		},
 	}
@@ -76,13 +77,13 @@ func Test_Server_ServeHTTP(t *testing.T) {
 				HecToken:           "",
 				InsecureSkipVerify: false,
 				HecIndex:           "",
-				WebHooks: []config.WebhookConfig{
+				WebHooks: []*config.WebhookConfig{
 					{
 						ID:      "foo",
 						Channel: "somechannel",
-										},
+					},
 				},
-			}, mockBot).(*serverImpl)
+			}, zap.NewNop(), mockBot).(*serverImpl)
 			recorder := httptest.NewRecorder()
 			if test.botFn != nil {
 				test.botFn(mockBot)

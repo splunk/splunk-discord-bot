@@ -5,9 +5,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
+	"go.opentelemetry.io/otel/metric/nonrecording"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -37,14 +41,23 @@ func (h *HecClientImpl) Stop() error {
 	return h.exporter.Shutdown(context.Background())
 }
 
-func CreateClient(endpoint string, token string, insecureSkipVerify bool, index string) (HecClient, error) {
+func CreateClient(endpoint string, token string, insecureSkipVerify bool, index string, logger *zap.Logger) (HecClient, error) {
 	factory := splunkhecexporter.NewFactory()
 	hecConfig := factory.CreateDefaultConfig().(*splunkhecexporter.Config)
+	hecConfig.LogDataEnabled = true
 	hecConfig.Endpoint = endpoint
 	hecConfig.Token = token
 	hecConfig.TLSSetting.InsecureSkipVerify = insecureSkipVerify
 	hecConfig.Index = index
-	exporter, err := factory.CreateLogsExporter(context.Background(), componenttest.NewNopExporterCreateSettings(), hecConfig)
+	exporter, err := factory.CreateLogsExporter(context.Background(), component.ExporterCreateSettings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger:         logger,
+			TracerProvider: trace.NewNoopTracerProvider(),
+			MeterProvider:  nonrecording.NewNoopMeterProvider(),
+			MetricsLevel:   configtelemetry.LevelNone,
+		},
+		BuildInfo: component.NewDefaultBuildInfo(),
+	}, hecConfig)
 	if err != nil {
 		return nil, err
 	}

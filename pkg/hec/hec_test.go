@@ -3,6 +3,7 @@ package hec
 import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/plog"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -21,7 +22,7 @@ func TestCreateClient(t *testing.T) {
 		assert.Equal(t, http.ErrServerClosed, err)
 	}()
 
-	hecClient, err := CreateClient("http://localhost:8080/", "1111-1111", true, "index")
+	hecClient, err := CreateClient("http://localhost:8080/", "1111-1111", true, "index", zap.NewNop())
 	assert.NoError(t, err)
 	logs := plog.NewLogs()
 	logs.ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty().LogRecords().AppendEmpty().Body().SetStringVal("hello")
