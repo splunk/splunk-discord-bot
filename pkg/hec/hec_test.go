@@ -2,7 +2,7 @@ package hec
 
 import (
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/model/pdata"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -17,15 +17,17 @@ func TestCreateClient(t *testing.T) {
 		})
 		http.Handle("/", handler)
 
-		http.ListenAndServe(":8080", nil)
+		err := http.ListenAndServe(":8080", nil)
+		assert.Equal(t, http.ErrServerClosed, err)
 	}()
 
-	hecClient, err := CreateClient("http://localhost:8080/", "1111-1111")
+	hecClient, err := CreateClient("http://localhost:8080/", "1111-1111", true, "index")
 	assert.NoError(t, err)
-	logs := pdata.NewLogs()
-	logs.ResourceLogs().AppendEmpty().InstrumentationLibraryLogs().AppendEmpty().LogRecords().AppendEmpty().Body().SetStringVal("hello")
-	hecClient.sendLogs(logs)
+	logs := plog.NewLogs()
+	logs.ResourceLogs().AppendEmpty().ScopeLogs().AppendEmpty().LogRecords().AppendEmpty().Body().SetStringVal("hello")
+	err = hecClient.SendLogs(logs)
+	assert.NoError(t, err)
 
 	message := <-messageChan
-	assert.Equal(t, `{"host":"unknown","event":"hello"}`, string(message))
+	assert.Equal(t, `{"host":"unknown","index":"index","event":"hello"}`, string(message))
 }

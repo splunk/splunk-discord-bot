@@ -11,3 +11,9 @@ build:
 
 run:
 	go run ./cmd/main.go
+
+test:
+	go test ./...
+
+lint:
+	gofmt -w -s ./...
